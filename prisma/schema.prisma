@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  coursesAsTeacher   Course[]        @relation("CourseTeacher")
+  questionsAsStudent Question[]
+  answeredQuestions  Question[]      @relation("QuestionAnswerer")
+  notes              Note[]
+  studentInvites     StudentInvite[] @relation("InviteCreator")
+  feedback           Feedback[]
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum FeedbackCategory {
+  BUG
+  FEATURE_REQUEST
+  UI_ISSUE
+  PERFORMANCE
+  OTHER
+}
+
+model Feedback {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  category    FeedbackCategory
+  status      FeedbackStatus   @default(OPEN)
+  userId      String
+  courseId    String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  teacherId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teacher        User            @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  videos         Video[]
+  worksheets     Worksheet[]
+  questions      Question[]
+  studentInvites StudentInvite[]
+  feedback       Feedback[]
+}
+
+model Video {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  courseId     String
+  fileUrl      String
+  thumbnailUrl String?
+  duration     Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+  notes     Note[]
+}
+
+model Worksheet {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  courseId    String
+  fileUrl     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id         String    @id @default(cuid())
+  content    String
+  courseId   String
+  videoId    String
+  studentId  String
+  teacherId  String?
+  answer     String?
+  createdAt  DateTime  @default(now())
+  answeredAt DateTime?
+
+  // Relations
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User?  @relation("QuestionAnswerer", fields: [teacherId], references: [id], onDelete: SetNull)
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  timestamp Int
+  videoId   String
+  studentId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, studentId, timestamp])
+}
+
+model StudentInvite {
+  id              String    @id @default(cuid())
+  email           String
+  courseId        String
+  token           String    @unique
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdAt       DateTime  @default(now())
+  createdByUserId String
+
+  // Relations
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdBy User   @relation("InviteCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email, courseId])
+}
