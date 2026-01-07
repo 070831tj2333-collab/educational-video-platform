@@ -11,6 +11,7 @@ const questionSchema = z.object({
 })
 
 const answerSchema = z.object({
+  questionId: z.string(),
   answer: z.string().min(1),
 })
 
@@ -56,11 +57,22 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
-      const videos = await prisma.video.findMany({
-        where: { courseId },
-        select: { id: true },
+      const video = await prisma.video.findUnique({
+        where: { id: videoId },
+        include: { course: true },
       })
-
+      
+      if (!video) {
+        return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+      }
+      
+      if (video.courseId !== courseId) {
+        return NextResponse.json(
+          { error: 'Invalid courseId' },
+          { status: 400 }
+        )
+      }
+      
       const questions = await prisma.question.findMany({
         where: {
           videoId: { in: videos.map((v) => v.id) },
