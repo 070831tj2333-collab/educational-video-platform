@@ -57,6 +57,12 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
+      if (!videoId) {
+  return NextResponse.json(
+    { error: 'videoId is required' },
+    { status: 400 }
+  )
+}
       const video = await prisma.video.findUnique({
         where: { id: videoId },
         include: { course: true },
