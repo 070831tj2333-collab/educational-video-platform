@@ -81,7 +81,7 @@ export async function GET(request: Request) {
       
       const questions = await prisma.question.findMany({
         where: {
-          videoId: { in: videos.map((v) => v.id) },
+          videoId: { in: video.map((v) => v.id) },
         },
         include: {
           student: {
