@@ -26,21 +26,16 @@ export async function GET(request: Request) {
     const videoId = searchParams.get('videoId')
     const courseId = searchParams.get('courseId')
 
+    // 🎓 Students or anyone providing a specific videoId
     if (videoId) {
       const questions = await prisma.question.findMany({
         where: { videoId },
         include: {
           student: {
-            select: {
-              id: true,
-              name: true,
-            },
+            select: { id: true, name: true },
           },
           teacher: {
-            select: {
-              id: true,
-              name: true,
-            },
+            select: { id: true, name: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -48,6 +43,7 @@ export async function GET(request: Request) {
       return NextResponse.json(questions)
     }
 
+    // 🧑‍🏫 Teachers listing all questions for their course
     if (courseId && session.user.role === 'TEACHER') {
       const course = await prisma.course.findUnique({
         where: { id: courseId },
@@ -57,44 +53,27 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
-      if (!videoId) {
-  return NextResponse.json(
-    { error: 'videoId is required' },
-    { status: 400 }
-  )
-}
-      const video = await prisma.video.findUnique({
-        where: { id: videoId },
+      // ✅ Fetch all videos for this course
+      const videos = await prisma.video.findMany({
+        where: { courseId },
         include: { course: true },
       })
-      
-      if (!video) {
-        return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+
+      if (videos.length === 0) {
+        return NextResponse.json([], { status: 200 })
       }
-      
-      if (video.courseId !== courseId) {
-        return NextResponse.json(
-          { error: 'Invalid courseId' },
-          { status: 400 }
-        )
-      }
-      
+
+      // ✅ Get all questions for all videos in this course
       const questions = await prisma.question.findMany({
         where: {
-          videoId: { in: video.map((v) => v.id) },
+          videoId: { in: videos.map((v) => v.id) },
         },
         include: {
           student: {
-            select: {
-              id: true,
-              name: true,
-            },
+            select: { id: true, name: true },
           },
           video: {
-            select: {
-              id: true,
-              title: true,
-            },
+            select: { id: true, title: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -163,10 +142,7 @@ export async function POST(request: Request) {
       },
       include: {
         student: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { id: true, name: true },
         },
       },
     })
@@ -225,16 +201,10 @@ export async function PATCH(request: Request) {
       },
       include: {
         student: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { id: true, name: true },
         },
         teacher: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { id: true, name: true },
         },
       },
     })
@@ -254,4 +224,3 @@ export async function PATCH(request: Request) {
     )
   }
 }
-
