@@ -1,3 +1,4 @@
+import { Note } from "@prisma/client"
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -70,7 +71,7 @@ export async function GET(
     }
 
     // Get user's notes for this video
-  let notes: any[] = []
+  let notes: Note[] = []
     if (session.user.role === 'STUDENT') {
       notes = await prisma.note.findMany({
         where: {
