@@ -70,7 +70,7 @@ export async function GET(
     }
 
     // Get user's notes for this video
-    let notes = []
+  let notes: any[] = []
     if (session.user.role === 'STUDENT') {
       notes = await prisma.note.findMany({
         where: {
